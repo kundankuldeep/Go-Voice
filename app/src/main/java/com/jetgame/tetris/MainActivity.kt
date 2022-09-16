@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -23,9 +24,9 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jetgame.tetris.logic.*
-import com.jetgame.tetris.speechTotext.ContinuousSpeechRecognizer
 import com.jetgame.tetris.speechTotext.RecognitionCallback
 import com.jetgame.tetris.speechTotext.RecognitionStatus
+import com.jetgame.tetris.speechTotext.SpeechService
 import com.jetgame.tetris.ui.GameBody
 import com.jetgame.tetris.ui.GameScreen
 import com.jetgame.tetris.ui.PreviewGamescreen
@@ -41,15 +42,19 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
         private const val RECORD_AUDIO_REQUEST_CODE = 101
     }
 
-    val variableForListening = true
-    var currentText =""
-    var mViewModel:GameViewModel?=null
+    private val variableForListening = true
+    private val TAG = "Recognition"
+    var mViewModel: GameViewModel? = null
 
-    private val recognitionManager: ContinuousSpeechRecognizer by lazy {
-        ContinuousSpeechRecognizer(
-            this, activationKeyword = ACTIVATION_KEYWORD, callback = this,
-            variableForListening = variableForListening
-        )
+//    private val recognitionManager: ContinuousSpeechRecognizer by lazy {
+//        ContinuousSpeechRecognizer(
+//            this, activationKeyword = ACTIVATION_KEYWORD, callback = this,
+//            variableForListening = variableForListening
+//        )
+//    }
+
+    private val recognitionManager: SpeechService by lazy {
+        SpeechService(context = this, callback = this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,8 +71,8 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
                 // A surface container using the 'background' color from the theme
                 Surface(color = MaterialTheme.colors.background) {
 
-                    mViewModel= viewModel<GameViewModel>()
-                    val viewState = mViewModel?.viewState?.value?:return@Surface
+                    mViewModel = viewModel<GameViewModel>()
+                    val viewState = mViewModel?.viewState?.value ?: return@Surface
 
 
                     LaunchedEffect(key1 = Unit) {
@@ -99,8 +104,7 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
                         onMove = { direction: Direction ->
                             if (direction == Direction.Up) {
                                 mViewModel?.dispatch(Action.Drop)
-                            }
-                            else mViewModel?.dispatch(Action.Move(direction))
+                            } else mViewModel?.dispatch(Action.Move(direction))
                         },
                         onRotate = {
                             mViewModel?.dispatch(Action.Rotate)
@@ -109,7 +113,7 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
                             mViewModel?.dispatch(Action.Reset)
                         },
                         onPause = {
-                            if (mViewModel?.viewState?.value?.isRuning==true) {
+                            if (mViewModel?.viewState?.value?.isRuning == true) {
                                 mViewModel?.dispatch(Action.Pause)
                             } else {
                                 mViewModel?.dispatch(Action.Resume)
@@ -126,6 +130,24 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
                 }
             }
         }
+
+        setTimer()
+    }
+
+    private fun setTimer() {
+        val timer = object : CountDownTimer(10000, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                Log.i(TAG, "onTick: $millisUntilFinished")
+            }
+
+            override fun onFinish() {
+                Log.i(TAG, "onFinish: ")
+                recognitionManager.stopRecognition()
+                recognitionManager.startRecognition()
+                setTimer()
+            }
+        }
+        timer.start()
     }
 
     private fun checkSpeechPermission() {
@@ -202,8 +224,6 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
         }
     }
 
-    val TAG = "Recognition"
-
     override fun onBeginningOfSpeech() {
         Log.i(TAG, "onBeginningOfSpeech: ")
     }
@@ -225,48 +245,70 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
     }
 
     override fun onPartialResults(results: List<String>) {
-        val text = results.joinToString(separator = "\n")
-        text.lowercase()
-        Log.i("Recognition","$text   ")
-        currentText=text
-        if(currentText.contains("up"))
-        {
-            mViewModel?.dispatch(Action.Drop)
-        }
-        else if(currentText.contains("left"))
-        {
-            mViewModel?.dispatch(Action.Move(Direction.Left))
-        }
-        else if(currentText.contains("right"))
-        {
-            mViewModel?.dispatch(Action.Move(Direction.Right))
-        }
-        else if(currentText.contains("down"))
-        {
-            Log.i("Recognition","in down")
-            mViewModel?.dispatch(Action.Move(Direction.Down))
-        }
-        else if(currentText.contains("rotate"))
-        {
-            mViewModel?.dispatch(Action.Rotate)
-        }
-        else if(currentText.contains("pause")||currentText.contains("resume"))
-        {
-            if (mViewModel?.viewState?.value?.isRuning==true) {
-                recognitionManager.stopRecognition()
-                mViewModel?.dispatch(Action.Pause)
-            } else {
-                recognitionManager.startRecognition()
-                mViewModel?.dispatch(Action.Resume)
-            }
-
-        }
-        else if(currentText.contains("start")||currentText.contains("reset"))
-        {
-            recognitionManager.startRecognition()
-            mViewModel?.dispatch(Action.Reset)
-        }
+//        val text = results.joinToString(separator = ",").lowercase()
+        val text = results[results.size - 1].lowercase()
+        handleGame(text)
         Log.i(TAG, "onPartialResults: $text")
+    }
+
+    var isStart = false
+    var isPause = false
+
+
+    private fun handleGame(currentText: String) {
+        when {
+            currentText.contains("start") -> {
+                if (!isStart) {
+                    mViewModel?.dispatch(Action.Reset)
+                    isStart = true
+                }
+            }
+            currentText.contains("pause") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Pause)
+                    isStart = false
+                    isPause = true
+                }
+            }
+            currentText.contains("resume") -> {
+                if (isPause) {
+                    mViewModel?.dispatch(Action.Resume)
+                    isStart = true
+                    isPause = false
+                }
+            }
+            currentText.contains("up") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Drop)
+                }
+            }
+            currentText.contains("down") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Move(Direction.Down))
+                }
+            }
+            currentText.contains("left") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Move(Direction.Left))
+                }
+            }
+            currentText.contains("right") || currentText.contains("write") || currentText.contains("light") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Move(Direction.Right))
+                }
+            }
+            currentText.contains("rotate") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Rotate)
+                }
+            }
+            currentText.contains("reset") -> {
+                if (isStart) {
+                    mViewModel?.dispatch(Action.Reset)
+                    isStart = false
+                }
+            }
+        }
     }
 
     override fun onResults(results: List<String>, scores: FloatArray?) {
@@ -285,6 +327,7 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
 
     override fun onEndOfSpeech() {
         Log.i(TAG, "onEndOfSpeech: ")
+        recognitionManager.startRecognition()
     }
 
 

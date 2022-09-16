@@ -1,7 +1,6 @@
 package com.jetgame.tetris.ui
 
 import android.view.MotionEvent.*
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
@@ -28,10 +27,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.jetgame.tetris.ui.theme.Purple200
 import com.jetgame.tetris.ui.theme.Purple500
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.ticker
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 @Preview
@@ -45,7 +40,7 @@ fun GameButton(
     content: @Composable (Modifier) -> Unit = {}
 ) {
     val backgroundShape = RoundedCornerShape(size / 2)
-    lateinit var ticker: ReceiveChannel<Unit>
+//    lateinit var ticker: ReceiveChannel<Unit>
 
     val coroutineScope = rememberCoroutineScope()
     val pressedInteraction = remember { mutableStateOf<PressInteraction.Press?>(null) }
@@ -84,12 +79,12 @@ fun GameButton(
                                 }
 
 
-                                ticker = ticker(initialDelayMillis = 300, delayMillis = 60)
-                                coroutineScope.launch {
-                                    ticker
-                                        .receiveAsFlow()
-                                        .collect { onClick() }
-                                }
+//                                ticker = ticker(initialDelayMillis = 300, delayMillis = 60)
+//                                coroutineScope.launch {
+//                                    ticker
+//                                        .receiveAsFlow()
+//                                        .collect { onClick() }
+//                                }
                             }
                             ACTION_CANCEL, ACTION_UP -> {
                                 coroutineScope.launch {
@@ -99,15 +94,15 @@ fun GameButton(
                                         pressedInteraction.value = null
                                     }
                                 }
-                                ticker.cancel()
+//                                ticker.cancel()
                                 if (it.action == ACTION_UP) {
                                     onClick()
                                 }
                             }
                             else -> {
-                                if (it.action != ACTION_MOVE) {
-                                    ticker.cancel()
-                                }
+//                                if (it.action != ACTION_MOVE) {
+//                                    ticker.cancel()
+//                                }
                                 return@pointerInteropFilter false
                             }
                         }
