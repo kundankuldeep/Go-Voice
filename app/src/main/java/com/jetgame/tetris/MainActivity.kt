@@ -37,12 +37,19 @@ import kotlinx.coroutines.isActive
 class MainActivity : ComponentActivity(), RecognitionCallback {
 
     companion object {
-        private const val ACTIVATION_KEYWORD = "Start game"
+        private const val ACTIVATION_KEYWORD = "Start"
         private const val RECORD_AUDIO_REQUEST_CODE = 101
     }
 
+    val variableForListening = true
+    var currentText =""
+    var mViewModel:GameViewModel?=null
+
     private val recognitionManager: ContinuousSpeechRecognizer by lazy {
-        ContinuousSpeechRecognizer(this, activationKeyword = ACTIVATION_KEYWORD, callback = this)
+        ContinuousSpeechRecognizer(
+            this, activationKeyword = ACTIVATION_KEYWORD, callback = this,
+            variableForListening = variableForListening
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,13 +66,14 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
                 // A surface container using the 'background' color from the theme
                 Surface(color = MaterialTheme.colors.background) {
 
-                    val viewModel = viewModel<GameViewModel>()
-                    val viewState = viewModel.viewState.value
+                    mViewModel= viewModel<GameViewModel>()
+                    val viewState = mViewModel?.viewState?.value?:return@Surface
+
 
                     LaunchedEffect(key1 = Unit) {
                         while (isActive) {
                             delay(650L - 55 * (viewState.level - 1))
-                            viewModel.dispatch(Action.GameTick)
+                            mViewModel?.dispatch(Action.GameTick)
                         }
                     }
 
@@ -73,11 +81,11 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
                     DisposableEffect(key1 = Unit) {
                         val observer = object : DefaultLifecycleObserver {
                             override fun onResume(owner: LifecycleOwner) {
-                                viewModel.dispatch(Action.Resume)
+                                mViewModel?.dispatch(Action.Resume)
                             }
 
                             override fun onPause(owner: LifecycleOwner) {
-                                viewModel.dispatch(Action.Pause)
+                                mViewModel?.dispatch(Action.Pause)
                             }
                         }
                         lifecycleOwner.lifecycle.addObserver(observer)
@@ -89,24 +97,26 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
 
                     GameBody(combinedClickable(
                         onMove = { direction: Direction ->
-                            if (direction == Direction.Up) viewModel.dispatch(Action.Drop)
-                            else viewModel.dispatch(Action.Move(direction))
+                            if (direction == Direction.Up) {
+                                mViewModel?.dispatch(Action.Drop)
+                            }
+                            else mViewModel?.dispatch(Action.Move(direction))
                         },
                         onRotate = {
-                            viewModel.dispatch(Action.Rotate)
+                            mViewModel?.dispatch(Action.Rotate)
                         },
                         onRestart = {
-                            viewModel.dispatch(Action.Reset)
+                            mViewModel?.dispatch(Action.Reset)
                         },
                         onPause = {
-                            if (viewModel.viewState.value.isRuning) {
-                                viewModel.dispatch(Action.Pause)
+                            if (mViewModel?.viewState?.value?.isRuning==true) {
+                                mViewModel?.dispatch(Action.Pause)
                             } else {
-                                viewModel.dispatch(Action.Resume)
+                                mViewModel?.dispatch(Action.Resume)
                             }
                         },
                         onMute = {
-                            viewModel.dispatch(Action.Mute)
+                            mViewModel?.dispatch(Action.Mute)
                         }
                     )) {
                         GameScreen(
@@ -216,6 +226,46 @@ class MainActivity : ComponentActivity(), RecognitionCallback {
 
     override fun onPartialResults(results: List<String>) {
         val text = results.joinToString(separator = "\n")
+        text.lowercase()
+        Log.i("Recognition","$text   ")
+        currentText=text
+        if(currentText.contains("up"))
+        {
+            mViewModel?.dispatch(Action.Drop)
+        }
+        else if(currentText.contains("left"))
+        {
+            mViewModel?.dispatch(Action.Move(Direction.Left))
+        }
+        else if(currentText.contains("right"))
+        {
+            mViewModel?.dispatch(Action.Move(Direction.Right))
+        }
+        else if(currentText.contains("down"))
+        {
+            Log.i("Recognition","in down")
+            mViewModel?.dispatch(Action.Move(Direction.Down))
+        }
+        else if(currentText.contains("rotate"))
+        {
+            mViewModel?.dispatch(Action.Rotate)
+        }
+        else if(currentText.contains("pause")||currentText.contains("resume"))
+        {
+            if (mViewModel?.viewState?.value?.isRuning==true) {
+                recognitionManager.stopRecognition()
+                mViewModel?.dispatch(Action.Pause)
+            } else {
+                recognitionManager.startRecognition()
+                mViewModel?.dispatch(Action.Resume)
+            }
+
+        }
+        else if(currentText.contains("start")||currentText.contains("reset"))
+        {
+            recognitionManager.startRecognition()
+            mViewModel?.dispatch(Action.Reset)
+        }
         Log.i(TAG, "onPartialResults: $text")
     }
 

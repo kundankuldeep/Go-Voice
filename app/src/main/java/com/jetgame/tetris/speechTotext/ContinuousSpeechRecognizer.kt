@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.widget.Toast
 import androidx.core.content.getSystemService
 
 /**
@@ -17,7 +18,8 @@ class ContinuousSpeechRecognizer(
     private val context: Context,
     private val activationKeyword: String,
     private val shouldMute: Boolean = false,
-    private val callback: RecognitionCallback? = null
+    private val callback: RecognitionCallback? = null,
+    var variableForListening: Boolean
 ) : RecognitionListener {
 
     private var isActivated: Boolean = false
@@ -61,6 +63,7 @@ class ContinuousSpeechRecognizer(
     }
 
     fun cancelRecognition() {
+        Toast.makeText(context, "Try after sometime", Toast.LENGTH_LONG)
         speech.cancel()
     }
 
@@ -142,12 +145,26 @@ class ContinuousSpeechRecognizer(
                 callback?.onResults(matches, scores)
                 stopRecognition()
             } else {
-                matches.firstOrNull { it.contains(other = activationKeyword, ignoreCase = true) }
-                    ?.let {
-                        isActivated = true
-                        callback?.onKeywordDetected()
+                if (variableForListening) {
+                    matches.firstOrNull {
+                        it.contains(
+                            other = activationKeyword,
+                            ignoreCase = true
+                        )
                     }
-                startRecognition()
+                        ?.let {
+                            isActivated = true
+                            callback?.onKeywordDetected()
+                        }
+                    startRecognition()
+                    variableForListening=false
+                }
+                else
+                {
+                    isActivated = true
+                    callback?.onKeywordDetected()
+                    startRecognition()
+                }
             }
         }
     }
