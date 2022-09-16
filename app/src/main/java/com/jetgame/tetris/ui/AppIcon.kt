@@ -63,7 +63,7 @@ private fun AppIcon() {
                 )
 
                 Text(
-                    "TETRIS",
+                    "GO-VOICE",
                     textAlign = TextAlign.Center,
                     color = BrickSpirit,
                     fontSize = 75.sp,

@@ -2,9 +2,9 @@ package com.jetgame.tetris.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple200 = Color(0xFFBB86FC)
-val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
+val Purple200 = Color(0xFF68829E)
+val Purple500 = Color(0xFF68829E)
+val Purple700 = Color(0xFF68829E)
 val Teal200 = Color(0xFF03DAC5)
 
 
@@ -14,4 +14,4 @@ val BrickHighlight = Color(0xFF560000)
 val ScreenBackground = Color(0xff9ead86)
 
 
-val BodyColor = Color(0xffefcc19)
+val BodyColor = Color(0xFFAAACB0)
