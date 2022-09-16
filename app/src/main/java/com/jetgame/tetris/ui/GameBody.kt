@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.jetgame.tetris.R
 import com.jetgame.tetris.logic.Direction
 import com.jetgame.tetris.ui.theme.BodyColor
+import com.jetgame.tetris.ui.theme.Purple500
 import com.jetgame.tetris.ui.theme.ScreenBackground
 
 @Composable
@@ -56,7 +57,7 @@ fun GameBody(
                     .align(Alignment.Center)
                     .size(330.dp, 400.dp)
                     .padding(top = 20.dp)
-                    .background(Color.Black.copy(alpha = 0.8f))
+                    .background(Purple500)
                     .padding(5.dp)
                     .background(BodyColor)
             )
